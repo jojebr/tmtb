@@ -15,50 +15,49 @@ import { initJsPsych } from "jspsych";
 
 /**
  * Standardiserade positioner för övning (1-4, A-D)
- * Skalad (INTE roterad) för iPad horizontal 1080x810
- * Assuming same canvas region as TMT A practice: 424:500 to 2016:1516 in GIMP
+ * Skalad (INTE roterad) för Lenovo Tab M9 1340x800
  */
 const PRACTICE_POSITIONS = [
-  { x: 474, y: 437, number: 1, type: 'number', label: "START" },
-  { x: 789, y: 102, number: 'A', type: 'letter' },
-  { x: 1001, y: 443, number: 2, type: 'number' },
-  { x: 713, y: 287, number: 'B', type: 'letter' },
-  { x: 765, y: 641, number: 3, type: 'number' },
-  { x: 214, y: 593, number: 'C', type: 'letter' },
-  { x: 119, y: 150, number: 4, type: 'number'},
-  { x: 399, y: 217, number: 'D', type: 'letter', label: "SLUT" }
+  { x: 588, y: 432, number: 1, type: 'number', label: "START" },
+  { x: 979, y: 101, number: 'A', type: 'letter' },
+  { x: 1242, y: 437, number: 2, type: 'number' },
+  { x: 885, y: 283, number: 'B', type: 'letter' },
+  { x: 950, y: 633, number: 3, type: 'number' },
+  { x: 266, y: 586, number: 'C', type: 'letter' },
+  { x: 148, y: 148, number: 4, type: 'number'},
+  { x: 495, y: 214, number: 'D', type: 'letter', label: "SLUT"}
 ];
 
 /**
  * Standardiserade positioner för test (1-13, A-L)
- * Roterad 90° och skalad för iPad horizontal 1080x810
+ * Roterad 90° och skalad för Lenovo Tab M9 1340x800
  */
 const TEST_POSITIONS = [
-  { x: 469, y: 369, number: 1, type: 'number', label: "START" },
-  { x: 744, y: 243, number: 'A', type: 'letter' },
-  { x: 793, y: 568, number: 2, type: 'number' },
-  { x: 244, y: 423, number: 'B', type: 'letter' },
-  { x: 368, y: 423, number: 3, type: 'number' },
-  { x: 598, y: 272, number: 'C', type: 'letter' },
-  { x: 223, y: 342, number: 4, type: 'number' },
-  { x: 209, y: 169, number: 'D', type: 'letter' },
-  { x: 522, y: 169, number: 5, type: 'number' },
-  { x: 893, y: 146, number: 'E', type: 'letter' },
-  { x: 812, y: 463, number: 6, type: 'number' },
-  { x: 887, y: 647, number: 'F', type: 'letter' },
-  { x: 436, y: 534, number: 7, type: 'number' },
-  { x: 670, y: 633, number: 'G', type: 'letter' },
-  { x: 179, y: 638, number: 8, type: 'number' },
-  { x: 510, y: 604, number: 'H', type: 'letter' },
-  { x: 182, y: 515, number: 9, type: 'number' },
-  { x: 185, y: 254, number: 'I', type: 'letter' },
-  { x: 142, y: 90, number: 10, type: 'number' },
-  { x: 775, y: 125, number: 'J', type: 'letter' },
-  { x: 933, y: 736, number: 11, type: 'number' },
-  { x: 932, y: 229, number: 'K', type: 'letter' },
-  { x: 411, y: 689, number: 12, type: 'number' },
-  { x: 824, y: 674, number: 'L', type: 'letter' },
-  { x: 127, y: 690, number: 13, type: 'number', label: "SLUT" }
+  { x: 582, y: 364, number: 1, type: 'number', label: "START" },
+  { x: 923, y: 240, number: 'A', type: 'letter' },
+  { x: 984, y: 561, number: 2, type: 'number' },
+  { x: 303, y: 418, number: 'B', type: 'letter' },
+  { x: 457, y: 418, number: 3, type: 'number' },
+  { x: 742, y: 269, number: 'C', type: 'letter' },
+  { x: 277, y: 338, number: 4, type: 'number' },
+  { x: 259, y: 167, number: 'D', type: 'letter' },
+  { x: 648, y: 167, number: 5, type: 'number' },
+  { x: 1108, y: 144, number: 'E', type: 'letter' },
+  { x: 1008, y: 457, number: 6, type: 'number' },
+  { x: 1101, y: 639, number: 'F', type: 'letter' },
+  { x: 541, y: 528, number: 7, type: 'number' },
+  { x: 831, y: 625, number: 'G', type: 'letter' },
+  { x: 222, y: 630, number: 8, type: 'number' },
+  { x: 633, y: 596, number: 'H', type: 'letter' },
+  { x: 226, y: 509, number: 9, type: 'number' },
+  { x: 230, y: 251, number: 'I', type: 'letter' },
+  { x: 176, y: 89, number: 10, type: 'number' },
+  { x: 962, y: 123, number: 'J', type: 'letter' },
+  { x: 1158, y: 727, number: 11, type: 'number' },
+  { x: 1157, y: 226, number: 'K', type: 'letter' },
+  { x: 510, y: 680, number: 12, type: 'number' },
+  { x: 1023, y: 666, number: 'L', type: 'letter' },
+  { x: 158, y: 681, number: 13, type: 'number', label: "SLUT" }
 ];
 
 /**
@@ -69,8 +68,8 @@ class CustomTMTPlugin {
     name: 'custom-tmt-b',
     parameters: {
       positions: { default: [] },
-      canvas_width: { default: 1080 },
-      canvas_height: { default: 810 },
+      canvas_width: { default: 1340 },
+      canvas_height: { default: 800 },
       circle_radius: { default: 30 },
       is_practice: { default: false },
       circle_count: { default: 25 }
@@ -337,8 +336,8 @@ function createTMTTrial(isPractice = false) {
   return {
     type: CustomTMTPlugin,
     positions: positions,
-    canvas_width: 1080,
-    canvas_height: 810,
+    canvas_width: 1340,
+    canvas_height: 800,
     circle_radius: 30,
     is_practice: isPractice,
     circle_count: positions.length
