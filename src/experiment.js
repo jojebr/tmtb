@@ -60,8 +60,8 @@ const PRACTICE_POSITIONS_REF = [
   { x: 713, y: 287, number: 'B', type: 'letter' },
   { x: 765, y: 641, number: 3, type: 'number' },
   { x: 214, y: 593, number: 'C', type: 'letter' },
-  { x: 119, y: 150, number: 4, type: 'number'},
-  { x: 399, y: 217, number: 'D', type: 'letter', label: "SLUT"}
+  { x: 119, y: 150, number: 4, type: 'number' },
+  { x: 399, y: 217, number: 'D', type: 'letter', label: "SLUT" }
 ];
 
 const PRACTICE_POSITIONS = scalePositions(PRACTICE_POSITIONS_REF);
@@ -144,8 +144,6 @@ class CustomTMTPlugin {
     
     const canvas = document.getElementById('tmt-canvas');
     const ctx = canvas.getContext('2d');
-    const errorMessage = document.getElementById('error-message');
-    const liftCountSpan = document.getElementById('lift-count');
     
     // Rita cirklar
     function drawCircles() {
@@ -234,9 +232,7 @@ class CustomTMTPlugin {
           lastX = coords.x;
           lastY = coords.y;
           currentStroke = [{ x: lastX, y: lastY, timestamp: performance.now() }];
-          errorMessage.textContent = '';
         } else {
-          errorMessage.textContent = 'Vänligen börja från 1 (START)';
           errors++;
         }
       } else {
@@ -254,9 +250,7 @@ class CustomTMTPlugin {
           lastX = coords.x;
           lastY = coords.y;
           currentStroke = [{ x: lastX, y: lastY, timestamp: performance.now() }];
-          errorMessage.textContent = '';
         } else {
-          errorMessage.textContent = 'Fortsätt från där du slutade';
           errors++;
         }
       }
@@ -303,9 +297,6 @@ class CustomTMTPlugin {
           position: { x: lastX, y: lastY },
           currentTarget: currentIndex
         });
-        
-        // Uppdatera räknare
-        liftCountSpan.textContent = liftOffEvents.length;
         
         currentStroke = [];
       }
@@ -489,7 +480,14 @@ export async function run({ assetPaths, input = {}, environment, title, version 
       <p style="margin-top: 30px; font-size: 1.2em;">Tack för ditt deltagande!</p>
     </div>`,
     choices: ['Avsluta'],
-    margin_vertical: '40px'
+    margin_vertical: '40px',
+    on_load: function() {
+      // Ensure canvas is removed/hidden
+      const canvas = document.getElementById('tmt-canvas');
+      if (canvas) {
+        canvas.style.display = 'none';
+      }
+    }
   });
 
   await jsPsych.run(timeline);
