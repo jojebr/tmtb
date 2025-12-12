@@ -388,7 +388,7 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   
   // Add pid to all trials
   jsPsych.data.addProperties({
-    pid: pid,
+    id: pid,
     test_version: 'TMT-B',
     target_width: TARGET_WIDTH,
     target_height: TARGET_HEIGHT
