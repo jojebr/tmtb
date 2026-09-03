@@ -363,7 +363,7 @@ class CustomTMTPlugin {
         
         // Kontrollera om klart
         if (currentIndex >= trial.circle_count) {
-          endTrial();
+          endTrial(); // endTrial() itself flushes the in-progress stroke
           return;
         }
       }
@@ -403,6 +403,17 @@ class CustomTMTPlugin {
       // Prevent double-execution (e.g. timeout firing right as last circle is reached)
       if (!canvas._tmtActive) return;
       canvas._tmtActive = false;
+      
+      // Flush any in-progress stroke. Trials can end while the finger/mouse
+      // is still down (finishing on the last circle, or hitting the 300s
+      // timeout mid-draw) - without this, that unfinished stroke (and
+      // sometimes the whole drawn path, if they never lifted at all) would
+      // be silently missing from the saved data.
+      if (isDrawing) {
+        isDrawing = false;
+        strokes.push([...currentStroke]);
+        currentStroke = [];
+      }
       
       const endTime = performance.now();
       const completionTime = endTime - startTime;
