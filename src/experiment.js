@@ -139,11 +139,13 @@ class CustomTMTPlugin {
     
     // Skapa HTML
     const html = `
-      <div id="tmt-container" style="text-align: center;">
-        <div id="tmt-timer" style="font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #000000; margin-bottom: 8px;"></div>
-        <canvas id="tmt-canvas" width="${trial.canvas_width}" height="${trial.canvas_height}" 
-                style="border: 2px solid black; background-color: #f0f0f0; touch-action: none; cursor: crosshair;">
-        </canvas>
+      <div style="text-align: center;">
+        <div id="tmt-container" style="position: relative; display: inline-block;">
+          <div id="tmt-timer" style="position: absolute; top: 10px; left: 10px; font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #000000; z-index: 10; pointer-events: none;"></div>
+          <canvas id="tmt-canvas" width="${trial.canvas_width}" height="${trial.canvas_height}" 
+                  style="border: 2px solid black; background-color: #f0f0f0; touch-action: none; cursor: crosshair; display: block;">
+          </canvas>
+        </div>
       </div>
     `;
     
