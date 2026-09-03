@@ -16,8 +16,8 @@ import { initJsPsych } from "jspsych";
 // ============================================
 // CONFIGURATION - Change these values as needed
 // ============================================
-const TARGET_WIDTH = 702;   // Target device width in pixels
-const TARGET_HEIGHT = 526;   // Target device height in pixels
+const TARGET_WIDTH = 756;   // Target device width in pixels
+const TARGET_HEIGHT = 567;   // Target device height in pixels
 const SAVE_JSON_FILE = false; // Set to true to auto-download JSON file on completion
 const TIMEOUT_SECONDS = 300;  // Max duration for a trial before it auto-ends (0 = no timeout)
 // ============================================
