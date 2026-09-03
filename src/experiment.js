@@ -61,8 +61,8 @@ const PRACTICE_POSITIONS_REF = [
   { x: 713, y: 287, number: 'B', type: 'letter' },
   { x: 765, y: 641, number: 3, type: 'number' },
   { x: 214, y: 593, number: 'C', type: 'letter' },
-  { x: 119, y: 150, number: 4, type: 'number', label: "SLUT" },
-  { x: 399, y: 217, number: 'D', type: 'letter' }
+  { x: 119, y: 150, number: 4, type: 'number' },
+  { x: 399, y: 217, number: 'D', type: 'letter', label: "SLUT" }
 ];
 
 const PRACTICE_POSITIONS = scalePositions(PRACTICE_POSITIONS_REF);
@@ -157,8 +157,17 @@ class CustomTMTPlugin {
     
     // Cache the canvas position; touchmove fires far too often to call
     // getBoundingClientRect() every time (forces a layout read each call)
+    let canvasClientWidth = 0, canvasClientHeight = 0, canvasClientLeft = 0, canvasClientTop = 0;
     function updateCanvasRect() {
       canvasRect = canvas.getBoundingClientRect();
+      // clientWidth/Height exclude the border; clientLeft/Top ARE the border
+      // thickness. Without correcting for these, pointer coordinates drift
+      // off from the actual drawing position - worse the further from the
+      // top-left corner - which is exactly the "line is offset" symptom.
+      canvasClientWidth = canvas.clientWidth;
+      canvasClientHeight = canvas.clientHeight;
+      canvasClientLeft = canvas.clientLeft;
+      canvasClientTop = canvas.clientTop;
     }
     updateCanvasRect();
     window.addEventListener('resize', updateCanvasRect);
@@ -241,9 +250,16 @@ class CustomTMTPlugin {
     function getCanvasCoords(e) {
       const touch = getTouchPoint(e);
       if (!touch) return null;
+      
+      // Map from CSS pixel position on screen to the canvas's internal
+      // drawing resolution, correcting for the border and any rendered-size
+      // vs internal-resolution mismatch (zoom, DPI, responsive scaling).
+      const scaleX = canvas.width / canvasClientWidth;
+      const scaleY = canvas.height / canvasClientHeight;
+      
       return {
-        x: touch.clientX - canvasRect.left,
-        y: touch.clientY - canvasRect.top
+        x: (touch.clientX - canvasRect.left - canvasClientLeft) * scaleX,
+        y: (touch.clientY - canvasRect.top - canvasClientTop) * scaleY
       };
     }
     
