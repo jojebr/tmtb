@@ -19,6 +19,7 @@ import { initJsPsych } from "jspsych";
 const TARGET_WIDTH = 1080;   // Target device width in pixels
 const TARGET_HEIGHT = 810;   // Target device height in pixels
 const SAVE_JSON_FILE = false; // Set to true to auto-download JSON file on completion
+const TIMEOUT_SECONDS = 300;  // Max duration for a trial before it auto-ends (0 = no timeout)
 // ============================================
 
 // Reference dimensions (original measurements)
@@ -60,8 +61,8 @@ const PRACTICE_POSITIONS_REF = [
   { x: 713, y: 287, number: 'B', type: 'letter' },
   { x: 765, y: 641, number: 3, type: 'number' },
   { x: 214, y: 593, number: 'C', type: 'letter' },
-  { x: 119, y: 150, number: 4, type: 'number' },
-  { x: 399, y: 217, number: 'D', type: 'letter', label: "SLUT" }
+  { x: 119, y: 150, number: 4, type: 'number', label: "SLUT" },
+  { x: 399, y: 217, number: 'D', type: 'letter' }
 ];
 
 const PRACTICE_POSITIONS = scalePositions(PRACTICE_POSITIONS_REF);
@@ -112,7 +113,8 @@ class CustomTMTPlugin {
       canvas_height: { default: TARGET_HEIGHT },
       circle_radius: { default: 30 },
       is_practice: { default: false },
-      circle_count: { default: 25 }
+      circle_count: { default: 25 },
+      timeout_ms: { default: TIMEOUT_SECONDS * 1000 } // 0 disables the timeout
     }
   };
 
@@ -130,10 +132,15 @@ class CustomTMTPlugin {
     let strokes = [];
     let currentStroke = [];
     let liftOffEvents = [];
+    let timedOut = false;
+    let timerInterval = null;
+    let activeTouchId = null; // tracks which finger we're following, ignores palm/second touches
+    let canvasRect = null;
     
     // Skapa HTML
     const html = `
       <div id="tmt-container" style="text-align: center;">
+        <div id="tmt-timer" style="font-family: Arial, sans-serif; font-size: 24px; font-weight: bold; color: #000000; margin-bottom: 8px;"></div>
         <canvas id="tmt-canvas" width="${trial.canvas_width}" height="${trial.canvas_height}" 
                 style="border: 2px solid black; background-color: #f0f0f0; touch-action: none; cursor: crosshair;">
         </canvas>
@@ -144,6 +151,36 @@ class CustomTMTPlugin {
     
     const canvas = document.getElementById('tmt-canvas');
     const ctx = canvas.getContext('2d');
+    const timerEl = document.getElementById('tmt-timer');
+    
+    // Cache the canvas position; touchmove fires far too often to call
+    // getBoundingClientRect() every time (forces a layout read each call)
+    function updateCanvasRect() {
+      canvasRect = canvas.getBoundingClientRect();
+    }
+    updateCanvasRect();
+    window.addEventListener('resize', updateCanvasRect);
+    window.addEventListener('orientationchange', updateCanvasRect);
+    
+    // Formatera millisekunder som mm:ss
+    function formatTime(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Uppdatera timer (räknar upp) och hantera timeout
+    function updateTimer() {
+      const elapsed = performance.now() - startTime;
+      
+      if (timerEl) timerEl.textContent = formatTime(elapsed);
+      
+      if (trial.timeout_ms && trial.timeout_ms > 0 && elapsed >= trial.timeout_ms) {
+        timedOut = true;
+        endTrial();
+      }
+    }
     
     // Rita cirklar
     function drawCircles() {
@@ -179,13 +216,32 @@ class CustomTMTPlugin {
       return Math.sqrt(dx * dx + dy * dy) <= trial.circle_radius;
     }
     
+    // Hämta den touch vi följer (ignorerar extra fingrar/handflata), eller mus-eventet
+    function getTouchPoint(e) {
+      if (e.touches && e.touches.length) {
+        if (activeTouchId !== null) {
+          const match = Array.from(e.touches).find(t => t.identifier === activeTouchId);
+          return match || null; // our finger lifted/changed - don't fall back to a different one
+        }
+        return e.touches[0];
+      }
+      if (e.changedTouches && e.changedTouches.length) {
+        if (activeTouchId !== null) {
+          const match = Array.from(e.changedTouches).find(t => t.identifier === activeTouchId);
+          return match || null;
+        }
+        return e.changedTouches[0];
+      }
+      return e; // mouse event
+    }
+    
     // Hämta canvas-koordinater från event
     function getCanvasCoords(e) {
-      const rect = canvas.getBoundingClientRect();
-      const touch = e.touches ? e.touches[0] : e;
+      const touch = getTouchPoint(e);
+      if (!touch) return null;
       return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
+        x: touch.clientX - canvasRect.left,
+        y: touch.clientY - canvasRect.top
       };
     }
     
@@ -222,7 +278,17 @@ class CustomTMTPlugin {
     // Börja rita
     function startDrawing(e) {
       e.preventDefault();
+      
+      // Ignore a second finger/palm touch while already drawing
+      if (isDrawing) return;
+      
+      // Lock onto whichever touch just started (if this is a touch event)
+      if (e.changedTouches && e.changedTouches.length) {
+        activeTouchId = e.changedTouches[0].identifier;
+      }
+      
       const coords = getCanvasCoords(e);
+      if (!coords) return;
       
       // If we haven't started yet, must start from first position
       if (strokes.length === 0) {
@@ -234,6 +300,7 @@ class CustomTMTPlugin {
           currentStroke = [{ x: lastX, y: lastY, timestamp: performance.now() }];
         } else {
           errors++;
+          activeTouchId = null;
         }
       } else {
         // After lifting, must continue from near the last drawn point
@@ -252,6 +319,7 @@ class CustomTMTPlugin {
           currentStroke = [{ x: lastX, y: lastY, timestamp: performance.now() }];
         } else {
           errors++;
+          activeTouchId = null;
         }
       }
     }
@@ -262,6 +330,8 @@ class CustomTMTPlugin {
       e.preventDefault();
       
       const coords = getCanvasCoords(e);
+      if (!coords) return; // the tracked finger isn't in this event; ignore other touches
+      
       drawLine(lastX, lastY, coords.x, coords.y);
       currentStroke.push({ x: coords.x, y: coords.y, timestamp: performance.now() });
       
@@ -286,34 +356,58 @@ class CustomTMTPlugin {
     
     // Sluta rita (lyft finger)
     function stopDrawing(e) {
-      if (isDrawing) {
-        e.preventDefault();
-        isDrawing = false;
-        strokes.push([...currentStroke]);
-        
-        // Registrera lift-off händelse
-        liftOffEvents.push({
-          timestamp: performance.now(),
-          position: { x: lastX, y: lastY },
-          currentTarget: currentIndex
-        });
-        
-        currentStroke = [];
+      if (!isDrawing) return;
+      
+      // If a touch event, only stop when the finger we're tracking actually lifted -
+      // ignore a second finger lifting while the tracked one is still down
+      if (e.changedTouches && e.changedTouches.length && activeTouchId !== null) {
+        const ended = Array.from(e.changedTouches).some(t => t.identifier === activeTouchId);
+        if (!ended) return;
       }
+      
+      e.preventDefault();
+      isDrawing = false;
+      activeTouchId = null;
+      strokes.push([...currentStroke]);
+      
+      // Registrera lift-off händelse
+      liftOffEvents.push({
+        timestamp: performance.now(),
+        position: { x: lastX, y: lastY },
+        currentTarget: currentIndex
+      });
+      
+      currentStroke = [];
     }
     
     // Avsluta test
     const endTrial = () => {
+      // Prevent double-execution (e.g. timeout firing right as last circle is reached)
+      if (!canvas._tmtActive) return;
+      canvas._tmtActive = false;
+      
       const endTime = performance.now();
       const completionTime = endTime - startTime;
+      
+      // Stoppa timer
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      
+      // Ta bort resize-lyssnare
+      window.removeEventListener('resize', updateCanvasRect);
+      window.removeEventListener('orientationchange', updateCanvasRect);
       
       // Ta bort eventlyssnare
       canvas.removeEventListener('mousedown', startDrawing);
       canvas.removeEventListener('mousemove', draw);
       canvas.removeEventListener('mouseup', stopDrawing);
+      canvas.removeEventListener('mouseleave', stopDrawing);
       canvas.removeEventListener('touchstart', startDrawing);
       canvas.removeEventListener('touchmove', draw);
       canvas.removeEventListener('touchend', stopDrawing);
+      canvas.removeEventListener('touchcancel', stopDrawing);
       
       // Spara data
       const trialData = {
@@ -321,11 +415,14 @@ class CustomTMTPlugin {
         trial_name: trial.is_practice ? 'övning' : 'test',
         test_part: 'B',
         circle_count: trial.circle_count,
+        circles_completed: currentIndex,
         completion_time_ms: completionTime,
         completion_time_seconds: (completionTime / 1000).toFixed(2),
         strokes_count: strokes.length,
         lift_count: liftOffEvents.length,
         errors: errors,
+        timed_out: timedOut,
+        timeout_ms: trial.timeout_ms,
         positions: trial.positions,
         strokes: strokes,
         lift_events: liftOffEvents,
@@ -337,15 +434,25 @@ class CustomTMTPlugin {
     };
     
     // Lägg till eventlyssnare
+    canvas._tmtActive = true;
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseleave', stopDrawing);
     
-    // Touch-events
-    canvas.addEventListener('touchstart', startDrawing);
-    canvas.addEventListener('touchmove', draw);
-    canvas.addEventListener('touchend', stopDrawing);
+    // Touch-events - passive:false is required so preventDefault() actually
+    // blocks native scroll/zoom/rubber-band gestures on Android tablets.
+    // Without this, some browsers silently ignore preventDefault(), and the
+    // page's native touch handling can take over mid-stroke, which looks
+    // like the test freezing or jumping.
+    canvas.addEventListener('touchstart', startDrawing, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing, { passive: false });
+    canvas.addEventListener('touchcancel', stopDrawing, { passive: false });
+    
+    // Starta timer (räknar upp)
+    updateTimer();
+    timerInterval = setInterval(updateTimer, 250);
     
     // Initial ritning
     drawCircles();
@@ -388,7 +495,7 @@ export async function run({ assetPaths, input = {}, environment, title, version 
   
   // Add pid to all trials
   jsPsych.data.addProperties({
-    id: pid,
+    pid: pid,
     test_version: 'TMT-B',
     target_width: TARGET_WIDTH,
     target_height: TARGET_HEIGHT
